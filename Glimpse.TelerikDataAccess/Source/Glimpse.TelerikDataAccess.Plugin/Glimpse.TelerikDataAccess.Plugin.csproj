@@ -1,0 +1,79 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{A2C1150F-DE99-4B3D-905C-AD3A46957415}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Glimpse.TelerikDataAccess.Plugin</RootNamespace>
+    <AssemblyName>Glimpse.TelerikDataAccess</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\..\Build\Product\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;NET40</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\..\..\Build\</OutputPath>
+    <DefineConstants>TRACE;NET40</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Glimpse.Core">
+      <HintPath>..\..\Lib\Glimpse.1.8.5\lib\net40\Glimpse.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Web" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Constants.cs" />
+    <Compile Include="Inspector\TelerikDataAccessExecutionBlock.cs" />
+    <Compile Include="Inspector\TelerikDataAccessInspector.cs" />
+    <Compile Include="Model\CommandInfo.cs" />
+    <Compile Include="Model\ConnectionInfo.cs" />
+    <Compile Include="Model\DataAccessMessages.cs" />
+    <Compile Include="Model\DataAccessTimelineMessage.cs" />
+    <Compile Include="Model\Kind.cs" />
+    <Compile Include="Model\MessageAggregation.cs" />
+    <Compile Include="Model\MessageAggregator.cs" />
+    <Compile Include="Model\NoConnectionMessage.cs" />
+    <Compile Include="Model\ParameterInfo.cs" />
+    <Compile Include="Model\TransactionInfo.cs" />
+    <Compile Include="Tab\DataAccess.cs" />
+    <Compile Include="Tab\DataAccessAggregator.cs" />
+    <Compile Include="Tab\DataAccessTabItem.cs" />
+    <Compile Include="Tab\DataAccessTabStatistics.cs" />
+    <Compile Include="Tracing\RuntimeTracer.cs" />
+    <Compile Include="Tracing\TracingContext.cs" />
+    <Compile Include="Tracing\TracingContextFactory.cs" />
+    <Compile Include="Util\Interfacer.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

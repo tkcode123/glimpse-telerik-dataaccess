@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{37E82C5C-BC94-43B4-8161-8A6DCED3AE29}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Glimpse.TelerikDataAccess.Nuget</RootNamespace>
+    <AssemblyName>Glimpse.TelerikDataAccess.Nuget</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\..\..\Build\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="TelerikDataAccessGlimpse.nuspec">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>TelerikDataAccessGlimpse.tt</DependentUpon>
+    </None>
+    <None Include="TelerikDataAccessGlimpse.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>TelerikDataAccessGlimpse.nuspec</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Glimpse.TelerikDataAccess.Plugin\Glimpse.TelerikDataAccess.Plugin.csproj">
+      <Project>{a2c1150f-de99-4b3d-905c-ad3a46957415}</Project>
+      <Name>Glimpse.TelerikDataAccess.Plugin</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="CopyAssembliesForNuGet">
+    <ItemGroup>
+      <Dependencies Include="$(OutputPath)\Glimpse.TelerikDataAccess.dll" />
+    </ItemGroup>
+    <Message Text="@(Dependencies)" />
+    <Copy SkipUnchangedFiles="true" SourceFiles="@(Dependencies)" DestinationFiles="@(Dependencies -> '$(OutputPath)\NuGet\lib\%(Filename)%(Extension)')" OverwriteReadOnlyFiles="true" />
+    <ItemGroup>
+      <NuSpecFiles Include="TelerikDataAccessGlimpse.nuspec" />
+    </ItemGroup>
+    <Copy SkipUnchangedFiles="true" SourceFiles="@(NuSpecFiles)" DestinationFiles="@(NuSpecFiles -> '$(OutputPath)\NuGet\%(Filename)%(Extension)')" OverwriteReadOnlyFiles="true" />
+  </Target>
+  <PropertyGroup>
+    <NugetSpecName>.\NuGet\TelerikDataAccessGlimpse.nuspec</NugetSpecName>
+    <NugetOutputPath>..\Nuget</NugetOutputPath>
+  </PropertyGroup>
+  <Import Project=".\..\Nuget.targets" />
+  <PropertyGroup>
+    <BuildDependsOn>
+      CopyAssembliesForNuGet;
+      $(BuildDependsOn);
+    </BuildDependsOn>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Make sure that the templates are run -->
+  <Import 
+          Condition=" '$(Configuration)|$(Platform)' != 'Debug|AnyCPU' " 
+          Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\TextTemplating\v10.0\Microsoft.TextTemplating.targets" />
+
+  <PropertyGroup>
+    <TransformOnBuild>False</TransformOnBuild>
+  </PropertyGroup>
+
+   <Target Name="PackNuGetPackage">
+    <PropertyGroup>
+      <Nuget>..\Nuget.exe</Nuget>
+      <NugetSpec>"$(OutputPath)/$(NugetSpecName)"</NugetSpec>
+      <NugetOutput>$(OutputPath)\..\NuGet\</NugetOutput>
+    </PropertyGroup>
+        
+	<MakeDir Directories="$(NugetOutput)"/>
+    <Exec Command="$(Nuget) pack $(NugetSpec) -OutputDirectory $(NugetOutput) -Version $(AssemblyVersion)" />
+    
+    <Message Text="NugetPackage generated." />
+  </Target>
+
+  <PropertyGroup>
+    <BuildDependsOn>
+      $(BuildDependsOn);
+      PackNuGetPackage;
+    </BuildDependsOn>
+  </PropertyGroup>
+</Project>
