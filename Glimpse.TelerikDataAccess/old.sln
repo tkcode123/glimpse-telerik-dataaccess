@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenAccess.Glimpse.Plugin", "Source\OpenAccess.Glimpse.Plugin\OpenAccess.Glimpse.Plugin.csproj", "{A2C1150F-DE99-4B3D-905C-AD3A46957414}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenAccess.Glimpse.Nuget", "Source\OpenAccess.Glimpse.Nuget\OpenAccess.Glimpse.Nuget.csproj", "{37E82C5C-BC94-43B4-8161-8A6DCED3AE28}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A2C1150F-DE99-4B3D-905C-AD3A46957414}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2C1150F-DE99-4B3D-905C-AD3A46957414}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2C1150F-DE99-4B3D-905C-AD3A46957414}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2C1150F-DE99-4B3D-905C-AD3A46957414}.Release|Any CPU.Build.0 = Release|Any CPU
+		{37E82C5C-BC94-43B4-8161-8A6DCED3AE28}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{37E82C5C-BC94-43B4-8161-8A6DCED3AE28}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{37E82C5C-BC94-43B4-8161-8A6DCED3AE28}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{37E82C5C-BC94-43B4-8161-8A6DCED3AE28}.Release|Any CPU.Build.0 = Debug|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

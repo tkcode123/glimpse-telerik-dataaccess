@@ -8,15 +8,9 @@ namespace Glimpse.TelerikDataAccess.Plugin.Model
 {
     class DataAccessTimelineMessage : ITimelineMessage
     {
-        internal DataAccessTimelineMessage(DataAccessMessage m, TimelineCategoryItem i)
+        internal DataAccessTimelineMessage(Guid id)
         {
-            EventCategory = i;
-            EventName = m.EventName ?? m.Kind.ToString();
-            EventSubText = m.EventSubText ?? "";
-            Duration = m.Duration;
-            Offset = m.Offset;
-            StartTime = m.StartTime;
-            Id = m.Id;
+            Id = id;
         }
 
         public TimelineCategoryItem EventCategory

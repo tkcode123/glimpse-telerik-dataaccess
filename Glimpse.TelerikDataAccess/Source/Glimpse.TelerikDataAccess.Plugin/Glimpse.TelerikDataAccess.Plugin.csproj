@@ -41,24 +41,16 @@
     <Compile Include="Constants.cs" />
     <Compile Include="Inspector\TelerikDataAccessExecutionBlock.cs" />
     <Compile Include="Inspector\TelerikDataAccessInspector.cs" />
-    <Compile Include="Model\CommandInfo.cs" />
-    <Compile Include="Model\ConnectionInfo.cs" />
     <Compile Include="Model\DataAccessMessages.cs" />
     <Compile Include="Model\DataAccessTimelineMessage.cs" />
     <Compile Include="Model\Kind.cs" />
-    <Compile Include="Model\MessageAggregation.cs" />
-    <Compile Include="Model\MessageAggregator.cs" />
-    <Compile Include="Model\NoConnectionMessage.cs" />
-    <Compile Include="Model\ParameterInfo.cs" />
-    <Compile Include="Model\TransactionInfo.cs" />
     <Compile Include="Tab\DataAccess.cs" />
     <Compile Include="Tab\DataAccessAggregator.cs" />
     <Compile Include="Tab\DataAccessTabItem.cs" />
     <Compile Include="Tab\DataAccessTabStatistics.cs" />
     <Compile Include="Tracing\RuntimeTracer.cs" />
-    <Compile Include="Tracing\TracingContext.cs" />
     <Compile Include="Tracing\TracingContextFactory.cs" />
-    <Compile Include="Util\Interfacer.cs" />
+    <Compile Include="Tracing\Interfacer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config">

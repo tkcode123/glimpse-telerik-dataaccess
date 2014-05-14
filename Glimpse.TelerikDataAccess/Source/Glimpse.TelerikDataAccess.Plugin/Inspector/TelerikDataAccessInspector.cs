@@ -13,7 +13,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Inspector
         {   // called one time when GlimpseRuntime is initialized
             TelerikDataAccessExecutionBlock.Instance.Execute();
 
-            TracingContextFactory.SetOperationContextFactory(new TracingContextFactory(context));
+            TracingContextFactory.SetOperationContextFactory(context);
         }
     }
 }

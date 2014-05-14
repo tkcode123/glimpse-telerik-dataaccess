@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Glimpse.Core.Extensibility;
 using Glimpse.Core.Extensions;
 using Glimpse.TelerikDataAccess.Plugin.Model;
@@ -15,37 +13,51 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
 
         internal DataAccessAggregator(ITabContext context)
         {
-            var raw = context.GetMessages<DataAccessMessage>();
-            rawMessages = new List<DataAccessMessage>(raw);
+            rawMessages = new List<DataAccessMessage>(context.GetMessages<DataAccessMessage>());
             aggregatedMessages = new List<DataAccessTabItem>(rawMessages.Count);
             Aggregate();
+            var broker = context.MessageBroker;
+            foreach (var e in aggregatedMessages)
+                e.ToTimeline(broker);
         }
 
         internal bool HasMessages { get { return aggregatedMessages.Count > 0; } }
+
+        private DataAccessTabItem FindReverseWithSameConnection(Kind kind, string connectionId)
+        {
+            for (int r = aggregatedMessages.Count-1; r >= 0; r--)
+            {
+                if (aggregatedMessages[r].Kind == kind && aggregatedMessages[r].Connection == connectionId)
+                {
+                    return aggregatedMessages[r];
+                }
+            }
+            return null;
+        }
 
         private void Aggregate()
         {
             var open = new Dictionary<string, int>();
             for (int i = 0; i < rawMessages.Count; i++)
             {
+                IEnumerable<object> details = null;
+                int? rows = null;
                 var raw = rawMessages[i];
                 var m = raw as CommandMessage;
                 if (m != null)
                 {
                     int start;
                     bool found = open.TryGetValue(m.Connection, out start);
-                    if (m.Kind == Kind.Sql)
+                    if (m.Kind == Kind.Sql || m.Kind == Kind.Batch)
                     {
                         if (found)
                         {   // detect second sql on the same connection
-                            if (start >= 0)
-                                open[m.Connection] = -start;
                         }
                         else
                             open.Add(m.Connection, i);
                         continue;
                     }
-                    else if (m.Kind == Kind.Done || m.Kind == Kind.NonQuery || m.Kind == Kind.Scalar || m.Kind == Kind.Reader)
+                    else if (m.Kind == (Kind.Sql|Kind.Done) || m.Kind == Kind.NonQuery || m.Kind == Kind.Scalar || m.Kind == Kind.Reader || m.Kind == (Kind.Batch|Kind.Done))
                     {
                         if (found)
                         {
@@ -56,17 +68,22 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                                 started.FetchDuration = m.Offset;
                                 continue;
                             }
-                            if (m.Kind == Kind.Done)
+                            if (m.Kind == (Kind.Sql|Kind.Done) || m.Kind == (Kind.Batch|Kind.Done))
                             {
                                 var fetch = (m.Offset - started.FetchDuration);
-                                started.FetchDuration = fetch;                                
+                                started.FetchDuration = fetch;
+                                started.Rows = m.Rows;
                             }
                             else
                             {
-                                started.Rows = m.Kind == Kind.NonQuery ? m.Affected : m.Rows;
+                                started.Rows = m.Rows;
                             }
                             open.Remove(m.Connection);
                             raw = rawMessages[start];
+                            details = CreateParameterDetails(started.Parameters);
+                            if (started.Rows.HasValue && started.Rows.Value < 0)
+                                started.Rows = null;
+                            rows = started.Rows;
                         }
                         else
                         {
@@ -75,37 +92,121 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                         }
                     }
                 }
-                else if (raw.Kind == Kind.None)
+                else if (raw.Kind == Kind.Open)
                 {
-                    if (raw.EventName == "OpenDone")
-                    {
-                        for (int r = aggregatedMessages.Count - 1; r >= 0; r--)
-                        {
-                            if (aggregatedMessages[r].Kind == Kind.Open && aggregatedMessages[r].Connection == ((ConnectionMessage)raw).Connection)
-                            {
-                                aggregatedMessages[r].Duration = (raw.Offset - aggregatedMessages[r].Offset);
-                                break;
-                            }
-                        }
-                        continue;
-                    }
+                    raw.EventName = raw.Text;
                 }
-                int? rs = (raw is CommandMessage) ? ((CommandMessage)raw).Rows : null;
-                if (rs.HasValue && rs.Value < 0)
-                    rs = null;
+                else if (raw.Kind == (Kind.Open | Kind.Done))
+                {
+                    var started = FindReverseWithSameConnection(Kind.Open, ((ConnectionMessage)raw).Connection);
+                    if (started != null)
+                        started.Duration = (raw.Offset - started.Offset);
+                    continue;
+                }
+                else if (raw.Kind == (Kind.Begin | Kind.Done))
+                {
+                    var started = FindReverseWithSameConnection(Kind.Begin, ((ConnectionMessage)raw).Connection);
+                    if (started != null)
+                    {
+                        started.Duration = (raw.Offset - started.Offset);
+                        started.Transaction = ((TransactionMessage)raw).Transaction;
+                        started.Text = raw.Text;
+                    }
+                    continue;
+                }
+                else if (raw.Kind == (Kind.Commit | Kind.Done))
+                {
+                    var started = FindReverseWithSameConnection(Kind.Commit, ((ConnectionMessage)raw).Connection);
+                    if (started != null)
+                        started.Duration = (raw.Offset - started.Offset);
+                    continue;
+                }
+                else if (raw.Kind == (Kind.Rollback | Kind.Done))
+                {
+                    var started = FindReverseWithSameConnection(Kind.Rollback, ((ConnectionMessage)raw).Connection);
+                    if (started != null)
+                        started.Duration = (raw.Offset - started.Offset);
+                    continue;
+                }
+                else if (raw.Kind == (Kind.Enlist | Kind.Done))
+                {
+                    var started = FindReverseWithSameConnection(Kind.Rollback, ((ConnectionMessage)raw).Connection);
+                    if (started != null)
+                        started.Duration = (raw.Offset - started.Offset);
+                    continue;
+                }
+               
                 aggregatedMessages.Add(new DataAccessTabItem()
                 {
+                    Id = raw.Id,
                     Ordinal = aggregatedMessages.Count,
                     Kind = raw.Kind,
-                    Rows = rs,
+                    Rows = rows,
                     Transaction = (raw is TransactionMessage) ? ((TransactionMessage)raw).Transaction : null,
                     Connection = (raw is ConnectionMessage) ? ((ConnectionMessage)raw).Connection : "",
                     FetchDuration = (raw is CommandMessage) ? ((CommandMessage)raw).FetchDuration : null,
+                    Details = details,
                     Duration = raw.Duration,
                     Offset = raw.Offset,
+                    Category = raw.EventCategory,
                     Text = raw.EventName ?? "",
                 });
             }
+        }
+
+        private static IEnumerable<object> CreateParameterDetails(ParameterInfo[] parameterInfo)
+        {
+            if (parameterInfo == null || parameterInfo.Length == 0)
+                return null;
+            var provider = System.Globalization.CultureInfo.InvariantCulture;
+            object[] cpy = new object[parameterInfo.Length];
+            for (int i = 0; i < parameterInfo.Length; i++)
+            {
+                var p = parameterInfo[i];
+                object v = p.Value;
+                if (v != null)
+                {
+                    switch (Type.GetTypeCode(v.GetType()))
+                    {
+                        case TypeCode.DateTime:
+                            v = ((DateTime)v).ToString("o", provider);
+                            break;
+                        case TypeCode.Single:
+                            v = ((Single)v).ToString("r", provider);
+                            break;
+                        case TypeCode.Double:
+                            v = ((Double)v).ToString("r", provider);
+                            break;
+                        case TypeCode.Decimal:
+                            v = ((Decimal)v).ToString("g", provider);
+                            break;
+                        case TypeCode.SByte:
+                        case TypeCode.Int16:
+                        case TypeCode.Int32:
+                        case TypeCode.Int64:
+                            v = ((IFormattable)v).ToString("d", provider);
+                            break;
+                        case TypeCode.Byte:
+                        case TypeCode.UInt16:
+                        case TypeCode.UInt32:
+                        case TypeCode.UInt64:
+                            v = "0x"+((IFormattable)v).ToString("X", provider);
+                            break;
+                        default:
+                            if (v is DateTimeOffset)
+                                v = ((DateTimeOffset)v).ToString("o", provider);
+                            else if (v is byte[])
+                                v = "byte["+((byte[])v).Length+"]";
+                            else
+                                v = v.ToString();
+                            break;
+                    }
+                }
+                else
+                    v = "<null>";
+                cpy[i] = new ParameterInfo() { Name = p.Name, Value = v, Row = p.Row };
+            }
+            return cpy;
         }
 
         internal DataAccessTabStatistics GetStatistics()
@@ -113,19 +214,41 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
             var conns = new Dictionary<string, bool>();
             var txns = new Dictionary<int, bool>();
             var qrys = 0;
+            int rowsFetched = 0;
+            int l2query = 0;
+            int l2objs = 0;
+            TimeSpan execTime = TimeSpan.Zero;
+            TimeSpan openTime = TimeSpan.Zero;
 
-            foreach (var m in rawMessages)
+            foreach (var m in aggregatedMessages)
             {
-                var cm = (m as ConnectionMessage);
-                if (cm != null)
-                    conns[cm.Connection] = true;
-                var tm = (m as TransactionMessage);
-                if (tm != null && tm.Transaction.HasValue)
-                    txns[tm.Transaction.Value] = true;
-                if (m.Kind == Kind.Sql)
+                if (string.IsNullOrEmpty(m.Connection) == false)
+                    conns[m.Connection] = true;
+                if (m.Transaction.HasValue)
+                    txns[m.Transaction.Value] = true;
+                if (m.Kind == Kind.CachedQuery || m.Kind == Kind.CachedCount)
+                    l2query++;
+                else if (m.Kind == Kind.CachedObject)
+                    l2objs++;
+                if (m.Kind == Kind.Sql || m.Kind == Kind.Scalar || m.Kind == Kind.Batch)
                     qrys++;
+                if (m.Rows.HasValue)
+                    rowsFetched += m.Rows.Value;
+                if (m.Kind == Kind.Open)
+                    openTime += m.Duration;
+                else
+                    execTime += m.Duration;
             }
-            return new DataAccessTabStatistics() { ConnectionCount = conns.Count, TransactionCount = txns.Count, QueryCount = qrys };
+            return new DataAccessTabStatistics() { 
+                ConnectionCount = conns.Count, 
+                TransactionCount = txns.Count, 
+                QueryCount = qrys, 
+                Rows = rowsFetched,
+                ExecutionTime = execTime,
+                ConnectionOpenTime = openTime,
+                L2CHitObjects = l2objs,
+                L2CHitQueries = l2query
+            };
         }
 
         internal IEnumerable<DataAccessTabItem> GetItems()

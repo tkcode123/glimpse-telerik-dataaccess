@@ -25,7 +25,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Model
 
         public string EventName { get; set; }
 
-        public string EventSubText { get; set; }
+        public string Text { get; set; }
 
         public Exception Failure { get; set; }
 
@@ -56,7 +56,6 @@ namespace Glimpse.TelerikDataAccess.Plugin.Model
         {
             return this.Id.GetHashCode();
         }
-        private string text;
     }
 
     public class ConnectionMessage : DataAccessMessage
@@ -71,7 +70,15 @@ namespace Glimpse.TelerikDataAccess.Plugin.Model
 
     public class CommandMessage : TransactionMessage
     {
-        public int? Affected { get; set; }
         public int? Rows { get; set; }
-    }    
+
+        public ParameterInfo[] Parameters { get; set; } 
+    }
+
+    public struct ParameterInfo
+    {
+        public int? Row { get; set; }
+        public string Name { get; set; }
+        public object Value { get; set; }
+    }
 }

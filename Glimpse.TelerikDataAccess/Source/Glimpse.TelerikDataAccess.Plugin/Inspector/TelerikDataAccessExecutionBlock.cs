@@ -13,7 +13,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Inspector
 
         private TelerikDataAccessExecutionBlock()
         {
-            Util.Interfacer.WireUp("OpenAccessRuntime.Intellitrace:tracerImpl", RuntimeTracer.Instance);
+            Tracing.Interfacer.WireUp("OpenAccessRuntime.Intellitrace:tracerImpl", RuntimeTracer.Instance);
         }
     }
 }

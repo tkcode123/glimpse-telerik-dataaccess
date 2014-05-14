@@ -9,10 +9,11 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
     {
         public int ConnectionCount { get; set; }
         public int QueryCount { get; set; }
-
         public int TransactionCount { get; set; }
+        public int Rows { get; set; }
         public TimeSpan ExecutionTime { get; set; }
         public TimeSpan ConnectionOpenTime { get; set; }
-        public int SecondLevelHits { get; set; }
+        public int L2CHitObjects { get; set; }
+        public int L2CHitQueries { get; set; }
     }
 }
