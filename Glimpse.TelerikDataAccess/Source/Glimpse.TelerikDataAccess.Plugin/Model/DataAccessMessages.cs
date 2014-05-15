@@ -35,7 +35,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Model
 
         public override string ToString()
         {
-            return Kind.ToString()+"-"+Id;
+            return Kind.ToString();
         }
 
         public override bool Equals(object obj)
@@ -73,6 +73,19 @@ namespace Glimpse.TelerikDataAccess.Plugin.Model
         public int? Rows { get; set; }
 
         public ParameterInfo[] Parameters { get; set; } 
+    }
+
+    public class EvictMessage : ConnectionMessage
+    {
+        public bool All { get; set; }
+        public string[] Classes { get; set; }
+        public int OIDs { get; set; }
+        public bool Remote { get; set; }
+    }
+
+    public class CacheMessage : ConnectionMessage
+    {
+        public int Objects { get; set; }
     }
 
     public struct ParameterInfo

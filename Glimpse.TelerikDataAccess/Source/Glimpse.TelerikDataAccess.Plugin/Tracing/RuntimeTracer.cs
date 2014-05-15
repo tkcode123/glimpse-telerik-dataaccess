@@ -83,7 +83,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
             return result.ToArray();
         }
 
-        public T MissingInterfaceMethod<T>(string name, params object [] args)
+        public T InterfaceMethod<T>(string name, params object [] args)
         {
             return default(T);
         }
@@ -259,6 +259,276 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
         public void StreamWrite(Stream stream, int bytes)
         {
         }
+        #endregion
+
+        #region OpenAccess Tracing v2
+       
+        private static Core.Extensibility.TimerResult GetPoint()
+        {
+            var ctx = TracingContextFactory.Current;
+            var tim = ctx.Timer;
+            if (tim != null)
+                return tim.Point();
+            return new Core.Extensibility.TimerResult() { StartTime = DateTime.Now };
+        }
+       
+        private T SetDuration<T>(object info) where T : DataAccessMessage
+        {
+            var point = GetPoint();
+            T result = info as T;
+            if (result.Offset == TimeSpan.Zero || point.Offset == TimeSpan.Zero)
+            {
+                result.Duration = point.StartTime - result.StartTime;
+                result.Offset = TimeSpan.Zero;
+            }
+            else
+                result.Duration = point.Offset - result.Offset;
+            return result;
+        }
+
+        private static void Publish2(DataAccessMessage msg)
+        {
+            var ctx = TracingContextFactory.Current;
+            if (msg.Offset == TimeSpan.Zero)
+                msg.EventCategory = (msg.Kind & Kind.Cache) == 0 ? CategoryDataAccessPool : CategoryDataAccessL2C;
+            else
+                msg.EventCategory = CategoryDataAccess;
+            ctx.Broker.Publish(msg);
+        }
+
+        public object ConOpen2(string Id, string ConnectionString)
+        {
+            return new ConnectionMessage()
+            {
+                Connection = Id,
+                Text = ConnectionString,
+                Kind = Model.Kind.Open | Kind.V2
+            }.AsTimedMessage(GetPoint());
+        }
+        public void ConOpenDone(object info, Exception e) 
+        {
+            var msg = SetDuration<ConnectionMessage>(info);
+            msg.Failure = e;
+            Publish2(msg);
+        }
+
+        public object TxnBegin(string Id, System.Data.IsolationLevel isolation)
+        {
+            return new TransactionMessage()
+            {
+                Connection = Id,
+                Text = isolation.ToString(),
+                Kind = Model.Kind.Begin | Kind.V2
+            }.AsTimedMessage(GetPoint());
+        }
+
+        public void TxnBeginDone(object info, DbTransaction t, Exception e)
+        {
+            var msg = SetDuration<TransactionMessage>(info);
+            msg.Failure = e;
+            msg.Transaction = Hash(t);
+            Publish2(msg);
+        }
+        
+        public object TxnEnlist2(string Id, object t) 
+        {
+            return new TransactionMessage()
+            {
+                Connection = Id,
+                Text = (t ?? "").ToString(),
+                Kind = Model.Kind.Enlist | Kind.V2
+            }.AsTimedMessage(GetPoint());
+        }
+
+        public void TxnEnlistDone(object info, Exception e) 
+        {
+            var msg = SetDuration<TransactionMessage>(info);
+            msg.Failure = e;
+            Publish2(msg);
+        }
+
+        public void TxnCompleted(string Id, object t, string state) 
+        {
+            var point = GetPoint();
+            var msg = new TransactionMessage();
+            msg.StartTime = point.StartTime;
+            msg.Offset = point.Offset;
+            msg.Connection = Id;
+            msg.Kind = Kind.Commit | Kind.V2;
+            msg.Text = state;
+            Publish2(msg);
+        }
+
+        public object TxnCommit2(string Id, DbTransaction t) 
+        {
+            return new TransactionMessage()
+            {
+                Connection = Id,
+                Transaction = Hash(t),
+                Kind = Model.Kind.Commit | Kind.V2
+            }.AsTimedMessage(GetPoint());
+        }
+        public void TxnCommitDone(object info, Exception e) 
+        {
+            var msg = SetDuration<TransactionMessage>(info);
+            msg.Failure = e;
+            Publish2(msg);
+        }
+
+        public object TxnRollback2(string Id, DbTransaction t)
+        {
+            return new TransactionMessage()
+            {
+                Connection = Id,
+                Transaction = Hash(t),
+                Kind = Model.Kind.Rollback | Kind.V2
+            }.AsTimedMessage(GetPoint());
+        }
+        
+        public void TxnRollbackDone(object info, Exception e)
+        {
+            var msg = SetDuration<TransactionMessage>(info);
+            msg.Failure = e;
+            Publish2(msg);
+        }
+
+        public object SqlBegin(string Id, DbCommand Sql) 
+        {
+            return new CommandMessage() { 
+                        Connection = Id, 
+                        Text = Sql.CommandText,
+                        Kind = Kind.Sql | Kind.V2,
+                        Transaction = Hash(Sql.Transaction),
+                        Parameters = Extract(Sql.Parameters)}.AsTimedMessage(GetPoint());
+        }
+        
+        public void SqlFailure(object info, Exception e) 
+        {
+            var msg = SetDuration<CommandMessage>(info);
+            msg.Failure = e;
+            Publish2(msg);
+        }
+        
+        public void SqlNonQuery(object info, int Ret) 
+        {
+            var msg = SetDuration<CommandMessage>(info);
+            msg.Kind = Kind.NonQuery | Kind.V2;
+            msg.Rows = Math.Max(0, Ret);
+            Publish2(msg);
+        }
+
+        public void SqlScalar(object info, object Ret)
+        {
+            var msg = SetDuration<CommandMessage>(info);
+            msg.Kind = Kind.Scalar | Kind.V2;
+            msg.Rows = (Ret == null || DBNull.Value.Equals(Ret)) ? 0 : 1;
+            Publish2(msg);
+        }
+
+        public void SqlReaderOpen(object info, DbDataReader Rdr) 
+        {
+            var msg = SetDuration<CommandMessage>(info);
+            Publish2(msg);
+        }
+
+        public object Batch2(string Id, DbDataAdapter adapter, DataRow[] rows) 
+        {
+            var cmd = adapter.InsertCommand ?? adapter.UpdateCommand ?? adapter.DeleteCommand;
+            return new CommandMessage()
+            {
+                Connection = Id,
+                Text = cmd.CommandText,
+                Kind = Model.Kind.Batch | Kind.V2,
+                Transaction = Hash(cmd.Transaction),
+                Parameters = Extract(cmd.Parameters, rows)
+            }.AsTimedMessage(GetPoint());
+        }
+
+        public void BatchDone(object info, int Rows, Exception e) 
+        {
+            var msg = SetDuration<CommandMessage>(info);
+            msg.Rows = Rows;
+            msg.Failure = e;
+            Publish2(msg);
+        }
+
+        public object GetSchema2(string Id, string collection, string[] restrict) 
+        {
+            return new CommandMessage()
+            {
+                Connection = Id,
+                Text = collection,
+                Kind = Model.Kind.GetSchema | Kind.V2
+            }.AsTimedMessage(GetPoint());
+        }
+        public void GetSchemaDone(object info, System.Data.DataTable dt) 
+        {
+            var msg = SetDuration<CommandMessage>(info);
+            msg.Rows = dt.Rows.Count;
+            Publish2(msg);
+        }
+        public void CacheEvicted(string id, bool remote, int oids, string[] classes, bool all) 
+        {
+            var msg = new EvictMessage()
+            {
+                Connection = id,
+                Classes = classes,
+                All = all,
+                OIDs = oids,
+                Kind = Kind.Evict,
+                Remote = remote
+            }.AsTimedMessage(GetPoint());
+            Publish2(msg);
+        }
+        public void CacheHitQuery(string id, bool count) 
+        {
+            var msg = new CacheMessage()
+            {
+                Connection = id,
+                Kind = count ? Kind.CachedCount : Kind.CachedQuery
+            }.AsTimedMessage(GetPoint());
+            Publish2(msg);
+        }
+        public void CacheHitObject(string id, int objs)
+        {
+            var msg = new CacheMessage()
+            {
+                Connection = id,
+                Kind = Kind.CachedObject,
+                Objects = objs
+            }.AsTimedMessage(GetPoint());
+            Publish2(msg);
+        }
+        public void OpenDatabase(string url, bool metaOnly)
+        {
+            var msg = new DataAccessMessage()
+            {
+                Kind = Kind.OpenDB,
+                Text = metaOnly ? "MetaOnly:"+url : url,
+            }.AsTimedMessage(GetPoint());
+            Publish2(msg);
+        }
+        public void CloseDatabase(string url)
+        {
+            var msg = new DataAccessMessage()
+            {
+                Kind = Kind.CloseDB,
+                Text = url
+            }.AsTimedMessage(GetPoint());
+            Publish2(msg);
+        }
+
+        public void ReplacedMetadata(string url)
+        {
+            var msg = new DataAccessMessage()
+            {
+                Kind = Kind.ChangeMeta,
+                Text = url
+            }.AsTimedMessage(GetPoint());
+            Publish2(msg);
+        }
+
+
         #endregion
     }
 }

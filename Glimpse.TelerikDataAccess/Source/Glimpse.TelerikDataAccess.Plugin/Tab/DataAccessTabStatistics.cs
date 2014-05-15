@@ -13,7 +13,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
         public int Rows { get; set; }
         public TimeSpan ExecutionTime { get; set; }
         public TimeSpan ConnectionOpenTime { get; set; }
-        public int L2CHitObjects { get; set; }
-        public int L2CHitQueries { get; set; }
+        public int SecondLevelHits { get; set; }
+        public int SecondLevelObjects { get; set; }
     }
 }

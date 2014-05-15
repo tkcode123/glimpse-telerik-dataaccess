@@ -24,8 +24,6 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
 
         public string Connection { get; set; }
 
-        public string Action { get { return Kind.ToString(); } }
-
         internal Kind Kind { get; set; }
 
         public TimeSpan? FetchDuration { get; set; }
@@ -34,20 +32,23 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
        
         public Guid Id { get; set; }
 
+        public string Action { get { return Kind.ToString(); } }
+
         public IEnumerable<object> Details { get; set; }
 
         public TimelineCategoryItem Category { get; set; }
 
         internal void ToTimeline(Glimpse.Core.Extensibility.IMessageBroker broker)
         {
-            if ((this.Kind & Kind.Done) == 0)
+            var k = this.Kind;
+            if ((k & Kind.Done) == 0)
             {
-                string name = this.Action;
-                if (this.Kind == Model.Kind.Scalar ||
-                    this.Kind == Model.Kind.NonQuery ||
-                    this.Kind == Model.Kind.Sql || 
-                    this.Kind == Model.Kind.Batch || 
-                    this.Kind == Model.Kind.None)
+                string name = k.ToString();
+                if (k == Kind.Scalar ||
+                    k == Kind.NonQuery ||
+                    k == Kind.Sql || 
+                    k == Kind.Batch || 
+                    k == Kind.None)
                     name = this.Text;
                 broker.Publish(new DataAccessTimelineMessage(this.Id)
                 {
@@ -55,7 +56,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                     Duration = this.Duration,
                     EventCategory = this.Category,
                     EventName = name,
-                    EventSubText = (Connection ?? "")
+                    EventSubText = Connection != null ? "\u2301"+Connection : ""
                 });
             }
         }

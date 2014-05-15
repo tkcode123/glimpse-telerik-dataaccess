@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Glimpse.Core.Extensibility;
 using Glimpse.Core.Extensions;
 using Glimpse.TelerikDataAccess.Plugin.Model;
@@ -37,6 +38,12 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
 
         private void Aggregate()
         {
+            bool v2 = rawMessages.Any(x => (x.Kind & Kind.V2) != 0);
+            if (v2)
+            {
+                Aggregate2();
+                return;
+            }
             var open = new Dictionary<string, int>();
             for (int i = 0; i < rawMessages.Count; i++)
             {
@@ -135,7 +142,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                         started.Duration = (raw.Offset - started.Offset);
                     continue;
                 }
-               
+
                 aggregatedMessages.Add(new DataAccessTabItem()
                 {
                     Id = raw.Id,
@@ -150,6 +157,71 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                     Offset = raw.Offset,
                     Category = raw.EventCategory,
                     Text = raw.EventName ?? "",
+                });
+            }
+        }
+
+        void Aggregate2()
+        {
+            for (int i = 0; i < rawMessages.Count; i++)
+            {
+                var raw = rawMessages[i];
+                var m = raw as CommandMessage;
+                IEnumerable<object> details = null;
+                int? rows = null;
+                string text = raw.Text;
+                var kind = raw.Kind & ~Kind.V2;
+                switch (kind)
+                {
+                    case Kind.Sql:
+                    case Kind.Scalar:
+                    case Kind.NonQuery:
+                    case Kind.Batch:
+                        rows = m.Rows;
+                        details = (m.Parameters != null ? m.Parameters.Cast<object>() : null);
+                        break;
+                    case Kind.Evict:
+                        var e = raw as EvictMessage;
+                        if (e.All)
+                            text = "<ALL>";
+                        else
+                        {
+                            text = "OIDs=" + e.OIDs; 
+                            if (e.Classes != null && e.Classes.Length > 0)
+                            {
+                                text += " Classes="+string.Join(",",e.Classes);
+                            }
+                        }
+                        break;
+                    case Kind.CachedCount:
+                    case Kind.CachedObject:
+                    case Kind.CachedQuery:
+                        break;
+                    case Kind.Sql | Kind.Done:
+                        var orig = FindReverseWithSameConnection(Kind.Sql, m.Connection);
+                        if (orig != null)
+                        {
+                            TimeSpan fetch = orig.Duration;
+                            orig.FetchDuration = fetch;
+                            orig.Duration = m.Offset - orig.Offset;
+                            orig.Rows = m.Rows;
+                        }
+                        continue;
+                }
+                aggregatedMessages.Add(new DataAccessTabItem()
+                {
+                    Id = raw.Id,
+                    Ordinal = aggregatedMessages.Count,
+                    Kind = kind,
+                    Rows = rows,
+                    Transaction = (raw is TransactionMessage) ? ((TransactionMessage)raw).Transaction : null,
+                    Connection = (raw is ConnectionMessage) ? ((ConnectionMessage)raw).Connection : "",
+                    FetchDuration = (raw is CommandMessage) ? ((CommandMessage)raw).FetchDuration : null,
+                    Details = details,
+                    Duration = raw.Duration,
+                    Offset = raw.Offset,
+                    Category = raw.EventCategory,
+                    Text = text ?? "",
                 });
             }
         }
@@ -230,7 +302,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                     l2query++;
                 else if (m.Kind == Kind.CachedObject)
                     l2objs++;
-                if (m.Kind == Kind.Sql || m.Kind == Kind.Scalar || m.Kind == Kind.Batch)
+                if (m.Kind == Kind.Sql || m.Kind == Kind.Scalar || m.Kind == Kind.NonQuery || m.Kind == Kind.Batch)
                     qrys++;
                 if (m.Rows.HasValue)
                     rowsFetched += m.Rows.Value;
@@ -246,8 +318,8 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                 Rows = rowsFetched,
                 ExecutionTime = execTime,
                 ConnectionOpenTime = openTime,
-                L2CHitObjects = l2objs,
-                L2CHitQueries = l2query
+                SecondLevelObjects = l2objs,
+                SecondLevelHits = l2query
             };
         }
 

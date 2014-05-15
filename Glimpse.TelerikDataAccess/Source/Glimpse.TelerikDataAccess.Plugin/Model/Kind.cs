@@ -11,6 +11,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Model
         None  = 0x0,
         Done  = 0x100000,
         Cache = 0x200000,
+        V2    = 0x400000,
 
         OpenDB = 0x0101,
         CloseDB = 0x0102,

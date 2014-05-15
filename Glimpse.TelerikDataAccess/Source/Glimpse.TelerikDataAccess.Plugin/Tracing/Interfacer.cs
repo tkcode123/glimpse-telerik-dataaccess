@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Text;
 using System.Threading;
 
 namespace Glimpse.TelerikDataAccess.Plugin.Tracing
@@ -41,6 +42,18 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
 
         private static void OnError(MethodInfo missing, Type t)
         {
+            var sb = new StringBuilder();
+            sb.Append(missing.ReturnType.FullName).Append(" ")
+              .Append(missing.Name).Append("(");
+            var pi = missing.GetParameters();
+            for (int i = 0; i < pi.Length; i++)
+            {
+                if (i > 0)
+                    sb.Append(", ");
+                sb.Append(pi[i].ParameterType.FullName).Append(" ").Append(pi[i].Name);
+            }
+            sb.Append(") missing");
+            System.Diagnostics.Trace.WriteLine(sb.ToString(), "Interfacer");
             //throw new Exception("Missing interface method " + missing.Name);
         }
 
@@ -84,7 +97,6 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
         {
             public bool Equals(MethodInfo x, MethodInfo y)
             {
-                if (x.Name.Equals(y.Name) == false) return false;
                 if (x.ReturnType != y.ReturnType) return false;
                 var xp = x.GetParameters();
                 var yp = y.GetParameters();
@@ -94,12 +106,25 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
                     if (xp[i].ParameterType != yp[i].ParameterType)
                         return false;
                 }
+                if (x.Name.Equals(y.Name) == false)
+                {
+                    string namex = x.Name;
+                    if (namex.EndsWith("2"))
+                        namex = namex.Substring(0, namex.Length - 1);
+                    string namey = y.Name;
+                    if (namey.EndsWith("2"))
+                        namey = namey.Substring(0, namey.Length - 1);
+                    if (namex.Equals(namey) == false) return false;
+                }
                 return true;
             }
 
             public int GetHashCode(MethodInfo obj)
             {
-                return obj.Name.GetHashCode() ^ obj.ReturnType.GetHashCode();
+                string name = obj.Name;
+                if (name.EndsWith("2"))
+                    name = name.Substring(0, name.Length - 1);
+                return name.GetHashCode() ^ obj.ReturnType.GetHashCode();
             }
         }       
 
