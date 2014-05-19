@@ -5,38 +5,41 @@ using System.Data.Common;
 using System.IO;
 using Glimpse.Core.Message;
 using Glimpse.TelerikDataAccess.Plugin.Model;
+using Glimpse.TelerikDataAccess.Plugin.Inspector;
 
 namespace Glimpse.TelerikDataAccess.Plugin.Tracing
 {
+    /// <summary>
+    /// Tracing endpoints for Telerik DataAccess Runtime internal tracing.
+    /// </summary>
     public class RuntimeTracer
     {
         internal static readonly RuntimeTracer Instance = new RuntimeTracer();
+        private static readonly TimeSpan NearlyNothing = new TimeSpan(10L);
         internal static readonly TimelineCategoryItem CategoryDataAccess = new TimelineCategoryItem("DataAccess", "#2db245", "Red");
         internal static readonly TimelineCategoryItem CategoryDataAccessL2C = new TimelineCategoryItem("DataAccess Cache", "#2db245", "Red");
         internal static readonly TimelineCategoryItem CategoryDataAccessPool = new TimelineCategoryItem("DataAccess Pool", "#2db245", "Red");
 
         private static void Publish(DataAccessMessage msg)
         {
-            var ctx = TracingContextFactory.Current;
-            var tim = ctx.Timer;
+            var tim = TelerikDataAccessInspector.Timer;
             if (tim != null)
             {
                 msg.EventCategory = CategoryDataAccess;
                 msg.AsTimedMessage(tim.Point());
-                ctx.Broker.Publish(msg);
+                TelerikDataAccessInspector.Broker.Publish(msg);
             }
             else
             {
                 msg.StartTime = DateTime.Now;
                 msg.EventCategory = (msg.Kind & Kind.Cache) ==  0 ? CategoryDataAccessPool : CategoryDataAccessL2C;
-                ctx.Broker.Publish(msg);
+                TelerikDataAccessInspector.Broker.Publish(msg);
             }
         }
 
         private static void Terminate(DataAccessMessage msg)
         {
-            var ctx = TracingContextFactory.Current;
-            var dur = ctx.Timer.Stop(msg.Offset);
+            var dur = TelerikDataAccessInspector.Timer.Stop(msg.Offset);
             msg.Duration = dur.Duration;
         }
 
@@ -83,6 +86,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
             return result.ToArray();
         }
 
+        // The method beeing called when a required method override is missing.
         public T InterfaceMethod<T>(string name, params object [] args)
         {
             return default(T);
@@ -265,8 +269,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
        
         private static Core.Extensibility.TimerResult GetPoint()
         {
-            var ctx = TracingContextFactory.Current;
-            var tim = ctx.Timer;
+            var tim = TelerikDataAccessInspector.Timer;
             if (tim != null)
                 return tim.Point();
             return new Core.Extensibility.TimerResult() { StartTime = DateTime.Now };
@@ -288,12 +291,11 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
 
         private static void Publish2(DataAccessMessage msg)
         {
-            var ctx = TracingContextFactory.Current;
             if (msg.Offset == TimeSpan.Zero)
                 msg.EventCategory = (msg.Kind & Kind.Cache) == 0 ? CategoryDataAccessPool : CategoryDataAccessL2C;
             else
                 msg.EventCategory = CategoryDataAccess;
-            ctx.Broker.Publish(msg);
+            TelerikDataAccessInspector.Broker.Publish(msg);
         }
 
         public object ConOpen2(string Id, string ConnectionString)
@@ -478,6 +480,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
                 Kind = Kind.Evict,
                 Remote = remote
             }.AsTimedMessage(GetPoint());
+            msg.Duration = NearlyNothing;
             Publish2(msg);
         }
         public void CacheHitQuery(string id, bool count) 
@@ -487,6 +490,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
                 Connection = id,
                 Kind = count ? Kind.CachedCount : Kind.CachedQuery
             }.AsTimedMessage(GetPoint());
+            msg.Duration = NearlyNothing;
             Publish2(msg);
         }
         public void CacheHitObject(string id, int objs)
@@ -497,6 +501,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
                 Kind = Kind.CachedObject,
                 Objects = objs
             }.AsTimedMessage(GetPoint());
+            msg.Duration = NearlyNothing;
             Publish2(msg);
         }
         public void OpenDatabase(string url, bool metaOnly)

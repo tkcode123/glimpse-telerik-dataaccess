@@ -142,7 +142,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                         started.Duration = (raw.Offset - started.Offset);
                     continue;
                 }
-
+                var err = (raw.Failure != null) ? new[] { new { Type = raw.Failure.GetType().FullName, Message = raw.Failure.Message, Stack = raw.Failure.GetBaseException().StackTrace } } : null;
                 aggregatedMessages.Add(new DataAccessTabItem()
                 {
                     Id = raw.Id,
@@ -153,6 +153,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                     Connection = (raw is ConnectionMessage) ? ((ConnectionMessage)raw).Connection : "",
                     FetchDuration = (raw is CommandMessage) ? ((CommandMessage)raw).FetchDuration : null,
                     Details = details,
+                    Errors = err,
                     Duration = raw.Duration,
                     Offset = raw.Offset,
                     Category = raw.EventCategory,
@@ -178,7 +179,13 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                     case Kind.NonQuery:
                     case Kind.Batch:
                         rows = m.Rows;
-                        details = (m.Parameters != null ? m.Parameters.Cast<object>() : null);
+                        if (m.Parameters != null)
+                        {
+                            if (kind == Kind.Batch)
+                                details = m.Parameters.Cast<object>();
+                            else
+                                details = m.Parameters.Select(x => new { x.Name, x.Value }).Cast<object>();
+                        }
                         break;
                     case Kind.Evict:
                         var e = raw as EvictMessage;
@@ -188,14 +195,16 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                         {
                             text = "OIDs=" + e.OIDs; 
                             if (e.Classes != null && e.Classes.Length > 0)
-                            {
-                                text += " Classes="+string.Join(",",e.Classes);
-                            }
+                                text += " Classes="+string.Join(",", e.Classes);
                         }
+                        if (e.Remote)
+                            text = "REMOTE " + text;
                         break;
-                    case Kind.CachedCount:
+                    //case Kind.CachedCount:
                     case Kind.CachedObject:
-                    case Kind.CachedQuery:
+                    //case Kind.CachedQuery:
+                        var cm = raw as CacheMessage;
+                        text = "Objects=" + cm.Objects;
                         break;
                     case Kind.Sql | Kind.Done:
                         var orig = FindReverseWithSameConnection(Kind.Sql, m.Connection);
@@ -208,6 +217,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                         }
                         continue;
                 }
+                var err = (raw.Failure != null) ? new[] { new { Type = raw.Failure.GetType().FullName, Message = raw.Failure.Message, Stack = raw.Failure.GetBaseException().StackTrace } } : null;
                 aggregatedMessages.Add(new DataAccessTabItem()
                 {
                     Id = raw.Id,
@@ -220,6 +230,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                     Details = details,
                     Duration = raw.Duration,
                     Offset = raw.Offset,
+                    Errors = err,
                     Category = raw.EventCategory,
                     Text = text ?? "",
                 });
@@ -280,7 +291,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
             }
             return cpy;
         }
-
+      
         internal DataAccessTabStatistics GetStatistics()
         {
             var conns = new Dictionary<string, bool>();
@@ -319,7 +330,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                 ExecutionTime = execTime,
                 ConnectionOpenTime = openTime,
                 SecondLevelObjects = l2objs,
-                SecondLevelHits = l2query
+                SecondLevelHits = l2query,
             };
         }
 

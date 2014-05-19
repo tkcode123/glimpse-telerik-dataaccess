@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Glimpse.Core.Framework.Support;
+﻿using Glimpse.Core.Framework.Support;
 using Glimpse.TelerikDataAccess.Plugin.Tracing;
 
 namespace Glimpse.TelerikDataAccess.Plugin.Inspector
@@ -12,7 +8,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Inspector
         public static readonly TelerikDataAccessExecutionBlock Instance = new TelerikDataAccessExecutionBlock();
 
         private TelerikDataAccessExecutionBlock()
-        {
+        {   // Executed only once: we wire up our runtime tracer instance to the one actually used by OpenAccess.
             Tracing.Interfacer.WireUp("OpenAccessRuntime.Intellitrace:tracerImpl", RuntimeTracer.Instance);
         }
     }

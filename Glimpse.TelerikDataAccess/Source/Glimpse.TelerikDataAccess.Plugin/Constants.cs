@@ -19,11 +19,10 @@ using Glimpse.Core.Extensibility;
 [assembly: InternalsVisibleTo("Glimpse.Test.TelerikDataAccess")]
 [assembly: NuGetPackage("Glimpse.TelerikDataAccess")]
 
-
 namespace Glimpse.TelerikDataAccess.Plugin
 {
     internal static class Constants
     {
-        internal const string DocumentationUrl4Tab = "http://www.telerik.com/data-access";
+        internal const string DocumentationUrl4Tab = "/Glimpse.axd?n=dataaccess_html&sub=help";
     }
 }

@@ -8,10 +8,41 @@ using System.Threading;
 
 namespace Glimpse.TelerikDataAccess.Plugin.Tracing
 {
+    /// <summary>
+    /// MSIL generator that allows a given type to get wired up as another, run time only known, types instance.
+    /// </summary>
+    /// <remarks>
+    /// This class allows to wrap a given instance and use that instance public methods by the wrapper. The wrapper
+    /// is constucted with an interface (hence the name) or base class (whose virtual methods form then the semantic interface).
+    /// This permits to have no dependencies on an assembly yet implement/forward a required type defined in this
+    /// assembly at runtime. The intended use is for implementing an internal trace interface and use a generated wrapper
+    /// instance to obtain trace information into an arbritrary instance. 
+    /// <para>
+    /// The wrapped instance must implement the methods (only methods are currently supported) that the wrapping instance
+    /// can expose and forward. 
+    /// </para>
+    /// <para>
+    /// No out/ref parameters are supported. The given instance can implement a return type 
+    /// deviating method by appending a '2' to the name.
+    /// </para>
+    /// </remarks>
     public static class Interfacer
     {
-        public static bool WireUp(string where, object instance)
+        /// <summary>
+        /// Creates a new type-correct wrapper object in the given place which forwards all methods to the given instance.
+        /// </summary>
+        /// <remarks>
+        /// This method does not perform normal type lookup, but rather searches in the assemblies of the current AppDomain.
+        /// <para>
+        /// The implemented format for property/field name referral is fullnameOfType:name .
+        /// </para>
+        /// </remarks>
+        /// <param name="where">Runtime-resolved property or field that gets the wrapped <paramref name="instance"/> set.</param>
+        /// <param name="instance">Instance to set at the specified prooperty/field.</param>
+        public static void WireUp(string where, object instance)
         {
+            if (string.IsNullOrEmpty(where))
+                throw new ArgumentNullException("where");
             string[] pieces = where.Split(':');
             foreach (var z in AppDomain.CurrentDomain.GetAssemblies())
             {
@@ -25,13 +56,13 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
                         if (pi != null)
                         {
                             pi.SetValue(null, Interfacer.Create(pi.PropertyType, instance, OnError), null);
-                            return true;
+                            return;
                         }
                         var fi = m[0] as FieldInfo;
                         if (fi != null)
                         {
                             fi.SetValue(null, Interfacer.Create(fi.FieldType, instance, OnError));
-                            return true;
+                            return;
                         }
                         throw new NotImplementedException("Neither a property nor a field: " + where);
                     }
@@ -56,13 +87,8 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
             System.Diagnostics.Trace.WriteLine(sb.ToString(), "Interfacer");
             //throw new Exception("Missing interface method " + missing.Name);
         }
-
-        public static T As<T>(object instance) where T : class
-        {
-            return (T)Create(typeof(T), instance);
-        }
-
-        public static object Create(Type targetType, object instance, Action<MethodInfo, Type> onError = null)
+       
+        private static object Create(Type targetType, object instance, Action<MethodInfo, Type> onError = null)
         {
             if (targetType == null)
                 throw new ArgumentNullException("targetType");
@@ -97,24 +123,30 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
         {
             public bool Equals(MethodInfo x, MethodInfo y)
             {
-                if (x.ReturnType != y.ReturnType) return false;
+                if (x.ReturnType != y.ReturnType) 
+                    return false;
                 var xp = x.GetParameters();
                 var yp = y.GetParameters();
-                if (xp.Length != yp.Length) return false;
+                if (xp.Length != yp.Length) 
+                    return false;
                 for (int i = 0; i < xp.Length; i++)
                 {
                     if (xp[i].ParameterType != yp[i].ParameterType)
                         return false;
                 }
                 if (x.Name.Equals(y.Name) == false)
-                {
+                {   // In order to support easy migration between versions of the same interface we need the
+                    // ability to provide methods with different return types yet same name and parameters.
+                    // This is something C# does not allow, therefore we need to resort to deviated name matching.
                     string namex = x.Name;
-                    if (namex.EndsWith("2"))
-                        namex = namex.Substring(0, namex.Length - 1);
                     string namey = y.Name;
-                    if (namey.EndsWith("2"))
-                        namey = namey.Substring(0, namey.Length - 1);
-                    if (namex.Equals(namey) == false) return false;
+                    int len = namex.Length;
+                    if (namex.EndsWith("2"))
+                        len--;
+                    else if (namey.EndsWith("2"))
+                        len--;
+                    if (string.CompareOrdinal(namex,0,namey,0,len) != 0) 
+                        return false;
                 }
                 return true;
             }
@@ -321,11 +353,17 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
             }           
         }
         
+        /// <summary>
+        /// Common base interface for all wrapping types.
+        /// </summary>
         public interface IInterfaceWrapper
         {
             object SetWrapped(object o);
         }
 
+        /// <summary>
+        /// Base implementation for wrapping types to interfaces.
+        /// </summary>
         public class InterfaceWrapperBase : IInterfaceWrapper
         {
             internal protected object wrapped;

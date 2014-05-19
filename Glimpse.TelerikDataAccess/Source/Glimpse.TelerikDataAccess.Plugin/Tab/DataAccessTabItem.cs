@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Glimpse.TelerikDataAccess.Plugin.Model;
-using Glimpse.Core.Tab.Assist;
 using Glimpse.Core.Message;
 
 namespace Glimpse.TelerikDataAccess.Plugin.Tab
@@ -38,6 +35,8 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
 
         public TimelineCategoryItem Category { get; set; }
 
+        public IEnumerable<object> Errors { get; set; }
+
         internal void ToTimeline(Glimpse.Core.Extensibility.IMessageBroker broker)
         {
             var k = this.Kind;
@@ -56,7 +55,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                     Duration = this.Duration,
                     EventCategory = this.Category,
                     EventName = name,
-                    EventSubText = Connection != null ? "\u2301"+Connection : ""
+                    EventSubText = string.IsNullOrEmpty(this.Connection) ? "" : ("\u260e "+this.Connection)
                 });
             }
         }

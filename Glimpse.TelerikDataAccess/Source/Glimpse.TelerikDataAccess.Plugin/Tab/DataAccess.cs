@@ -19,17 +19,16 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                            r.Cell("queryCount").WidthInPixels(100).AlignRight().WithTitle("# Queries");
                            r.Cell("rows").WidthInPixels(100).AlignRight().WithTitle("# Rows");
                            r.Cell("transactionCount").WidthInPixels(100).AlignRight().WithTitle("# Transactions");
-                           r.Cell("secondLevelHits").WidthInPixels(100).AlignRight().WithTitle("# L2C Hits");
-                           r.Cell("secondLevelObjects").WidthInPixels(100).AlignRight().WithTitle("# L2C Objects");
+                           r.Cell("secondLevelHits").WidthInPixels(100).AlignRight().WithTitle("# L2C Query Hits");
+                           r.Cell("secondLevelObjects").WidthInPixels(100).AlignRight().WithTitle("# L2C Object Hits");
                            r.Cell("executionTime").WidthInPixels(150).AlignRight().Suffix(" ms").Class("mono").WithTitle("\u03a3 Execution Time");
                            r.Cell("connectionOpenTime").WidthInPixels(150).Suffix(" ms").AlignRight().Class("mono").WithTitle("\u03a3 Connection Opening Time");
-                           //r.Cell("dummy").WithTitle("-");
                        }))
                 .Cell("Activities", TabLayout.Create()
                        .Row(r =>
                        {
                            r.Cell("ordinal").AsKey().AlignRight().WidthInPixels(30).WithTitle("#");
-                           r.Cell("connection").AlignRight().WidthInPixels(30).WithTitle("\u2301"); // http://unicode-table.com
+                           r.Cell("connection").AlignRight().WidthInPixels(30).WithTitle("\u260e"); // \2301 http://unicode-table.com
                            r.Cell("transaction").AlignRight().WidthInPixels(30).WithTitle("Txn"); 
                            r.Cell("action").WidthInPixels(50).WithTitle("Action");
                            r.Cell("text").AsCode(CodeType.Sql).DisablePreview().WithTitle("Text");
@@ -86,7 +85,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
             if (agg.HasMessages)
             {
                 return new Dictionary<string,object>() 
-                {
+                {                    
                     { "Statistics", new object[] { agg.GetStatistics() } }, 
                     { "Activities", agg.GetItems() }
                 };
