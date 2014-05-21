@@ -35,7 +35,9 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
 
         public TimelineCategoryItem Category { get; set; }
 
-        public IEnumerable<object> Errors { get; set; }
+        public string Hint { get; set; }
+
+        public IEnumerable<Exception> Errors { get; set; }
 
         internal void ToTimeline(Glimpse.Core.Extensibility.IMessageBroker broker)
         {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Glimpse.Core.Extensibility;
-using Glimpse.TelerikDataAccess.Plugin.Tracing;
+using Glimpse.Core.Message;
 
 namespace Glimpse.TelerikDataAccess.Plugin.Inspector
 {

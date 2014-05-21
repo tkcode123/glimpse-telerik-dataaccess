@@ -94,4 +94,27 @@ namespace Glimpse.TelerikDataAccess.Plugin.Model
         public string Name { get; set; }
         public object Value { get; set; }
     }
+
+    public class LinqMessage : DataAccessMessage
+    {
+        public int? Compiler { get; set; }
+    }
+
+    public class GCMessage : DataAccessMessage
+	{
+        public GCMessage()
+        {
+            Gen0 = System.GC.CollectionCount(0);
+            Gen1 = System.GC.CollectionCount(1);
+            Gen2 = System.GC.CollectionCount(2);
+        }
+        public int Gen0 { get; set; }
+        public int Gen1 { get; set; }
+        public int Gen2 { get; set; }
+
+        public override string ToString()
+        {
+            return "Gen0="+Gen0+" Gen1="+Gen1+" Gen2="+Gen2;
+        }
+	}
 }

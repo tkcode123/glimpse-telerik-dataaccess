@@ -23,6 +23,10 @@ namespace Glimpse.TelerikDataAccess.Plugin.Model
         NonQuery = 0x1008,
         Batch = 0x1010,
         
+        Linq = 0x1101,
+        Translate = 0x1102,
+        Splitted = 0x1104,
+
         Begin = 0x2001,
         Commit = 0x2002,
         Rollback = 0x2004,

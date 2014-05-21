@@ -15,24 +15,27 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                 .Cell("Statistics", TabLayout.Create()
                        .Row(r =>
                        {
-                           r.Cell("connectionCount").WidthInPixels(100).AlignRight().WithTitle("# Connections");
-                           r.Cell("queryCount").WidthInPixels(100).AlignRight().WithTitle("# Queries");
-                           r.Cell("rows").WidthInPixels(100).AlignRight().WithTitle("# Rows");
-                           r.Cell("transactionCount").WidthInPixels(100).AlignRight().WithTitle("# Transactions");
-                           r.Cell("secondLevelHits").WidthInPixels(100).AlignRight().WithTitle("# L2C Query Hits");
-                           r.Cell("secondLevelObjects").WidthInPixels(100).AlignRight().WithTitle("# L2C Object Hits");
+                           r.Cell("connectionCount").WidthInPixels(50).AlignRight().WithTitle("# Connections");
+                           r.Cell("queryCount").WidthInPixels(50).AlignRight().WithTitle("# SQL Queries");
+                           r.Cell("splittedCount").WidthInPixels(50).AlignRight().WithTitle("# Splitted LINQ");
+                           r.Cell("rows").WidthInPixels(50).AlignRight().WithTitle("# Rows");
+                           r.Cell("transactionCount").WidthInPixels(50).AlignRight().WithTitle("# Transactions");
+                           r.Cell("secondLevelHits").WidthInPixels(50).AlignRight().WithTitle("# L2C Query Hits");
+                           r.Cell("secondLevelObjects").WidthInPixels(50).AlignRight().WithTitle("# L2C Object Hits");
+                           r.Cell("gcCounts").AlignRight().WidthInPixels(150).WithTitle("# GC Collects");
                            r.Cell("executionTime").WidthInPixels(150).AlignRight().Suffix(" ms").Class("mono").WithTitle("\u03a3 Execution Time");
                            r.Cell("connectionOpenTime").WidthInPixels(150).Suffix(" ms").AlignRight().Class("mono").WithTitle("\u03a3 Connection Opening Time");
                        }))
                 .Cell("Activities", TabLayout.Create()
                        .Row(r =>
                        {
-                           r.Cell("ordinal").AsKey().AlignRight().WidthInPixels(30).WithTitle("#");
+                           r.Cell("hint").DisablePreview().Class("warn").WidthInPixels(20).WithTitle("!");
+                           r.Cell("ordinal").AsKey().AlignRight().WidthInPixels(20).WithTitle("#");
                            r.Cell("connection").AlignRight().WidthInPixels(30).WithTitle("\u260e"); // \2301 http://unicode-table.com
                            r.Cell("transaction").AlignRight().WidthInPixels(30).WithTitle("Txn"); 
                            r.Cell("action").WidthInPixels(50).WithTitle("Action");
                            r.Cell("text").AsCode(CodeType.Sql).DisablePreview().WithTitle("Text");
-                           r.Cell("details").WidthInPercent(20).DisablePreview().WithTitle("Parameters");
+                           r.Cell("details").WidthInPercent(20).DisablePreview().WithTitle("Details");
                            r.Cell("rows").AlignRight().WidthInPixels(30).WithTitle("Rows");
                            r.Cell("fetchDuration").WidthInPercent(6).Suffix(" ms").AlignRight().Class("mono").WithTitle("Fetch");
                            r.Cell("duration").WidthInPercent(6).Suffix(" ms").AlignRight().Class("mono").WithTitle("Duration");

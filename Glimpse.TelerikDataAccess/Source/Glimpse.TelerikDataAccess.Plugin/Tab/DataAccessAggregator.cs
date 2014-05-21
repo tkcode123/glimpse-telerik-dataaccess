@@ -17,6 +17,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
             rawMessages = new List<DataAccessMessage>(context.GetMessages<DataAccessMessage>());
             aggregatedMessages = new List<DataAccessTabItem>(rawMessages.Count);
             Aggregate();
+            AggregateHints();
             var broker = context.MessageBroker;
             foreach (var e in aggregatedMessages)
                 e.ToTimeline(broker);
@@ -26,11 +27,23 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
 
         private DataAccessTabItem FindReverseWithSameConnection(Kind kind, string connectionId)
         {
-            for (int r = aggregatedMessages.Count-1; r >= 0; r--)
+            for (int r = aggregatedMessages.Count - 1; r >= 0; r--)
             {
                 if (aggregatedMessages[r].Kind == kind && aggregatedMessages[r].Connection == connectionId)
                 {
                     return aggregatedMessages[r];
+                }
+            }
+            return null;
+        }
+
+        private LinqMessage FindReverseWithSameCompiler(Kind kind, int from, int? comp)
+        {
+            for (int r = from - 1; r >= 0; r--)
+            {
+                if (rawMessages[r].Kind == kind && ((LinqMessage)rawMessages[r]).Compiler == comp)
+                {
+                    return (LinqMessage)rawMessages[r];
                 }
             }
             return null;
@@ -142,7 +155,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                         started.Duration = (raw.Offset - started.Offset);
                     continue;
                 }
-                var err = (raw.Failure != null) ? new[] { new { Type = raw.Failure.GetType().FullName, Message = raw.Failure.Message, Stack = raw.Failure.GetBaseException().StackTrace } } : null;
+                var err = (raw.Failure != null) ? new[] {raw.Failure} : null;
                 aggregatedMessages.Add(new DataAccessTabItem()
                 {
                     Id = raw.Id,
@@ -157,7 +170,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                     Duration = raw.Duration,
                     Offset = raw.Offset,
                     Category = raw.EventCategory,
-                    Text = raw.EventName ?? "",
+                    Text = raw.EventName ?? ""
                 });
             }
         }
@@ -200,11 +213,14 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                         if (e.Remote)
                             text = "REMOTE " + text;
                         break;
-                    //case Kind.CachedCount:
                     case Kind.CachedObject:
-                    //case Kind.CachedQuery:
+                    case Kind.CachedCount:
+                    case Kind.CachedQuery:
                         var cm = raw as CacheMessage;
-                        text = "Objects=" + cm.Objects;
+                        if (kind == Kind.CachedObject)
+                            text = "Objects=" + cm.Objects;
+                        else
+                            text = cm.Text;
                         break;
                     case Kind.Sql | Kind.Done:
                         var orig = FindReverseWithSameConnection(Kind.Sql, m.Connection);
@@ -216,8 +232,20 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                             orig.Rows = m.Rows;
                         }
                         continue;
+                    case Kind.Translate:
+                        continue;
+                    case Kind.Linq:
+                        var trans = FindReverseWithSameCompiler(Kind.Translate, i, ((LinqMessage)raw).Compiler);
+                        if (trans != null)
+                        {
+                            details = new[] { new { TranslationTime = trans.Duration }};
+                        }
+                        break;
+                    case Kind.Splitted:
+                        details = new[] { new { OnServer = raw.EventName } };
+                        break;
                 }
-                var err = (raw.Failure != null) ? new[] { new { Type = raw.Failure.GetType().FullName, Message = raw.Failure.Message, Stack = raw.Failure.GetBaseException().StackTrace } } : null;
+                var err = (raw.Failure != null) ? new[] { raw.Failure } : null;
                 aggregatedMessages.Add(new DataAccessTabItem()
                 {
                     Id = raw.Id,
@@ -234,6 +262,41 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                     Category = raw.EventCategory,
                     Text = text ?? "",
                 });
+            }
+        }
+
+        void AggregateHints()
+        {
+            var similar = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+            foreach(var m in aggregatedMessages)
+            {
+                if (m.Errors != null && m.Errors.Count() > 0)
+                    m.Hint = m.Errors.First().Message;
+
+                switch(m.Kind)
+                {
+                    case Kind.Scalar:
+                    case Kind.Sql:
+                    case Kind.NonQuery:
+                    case Kind.Batch:
+                        int old;
+                        if (similar.TryGetValue(m.Text, out old))
+                        {
+                            if (IsDuplicate(m.Text))
+                                m.Hint = m.Hint ?? "Same as "+old+"?";
+                        }
+                        similar[m.Text] = m.Ordinal;
+                        if (m.Rows.HasValue)
+                        {
+                            if (m.Rows.Value >= 500)
+                                m.Hint = m.Hint ?? "Rows!";
+                            else if (m.Rows.Value > 100)
+                                m.Hint = m.Hint ?? "Rows?";
+                        }
+                        break;
+                }
+                m.Hint = m.Hint ?? "";
             }
         }
 
@@ -291,7 +354,26 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
             }
             return cpy;
         }
-      
+
+        private static readonly List<string> suppressSql = new List<string>()
+        {
+            "select db_name()",
+            "SET LOCK_TIMEOUT ",
+            "select @@trancount"
+        };
+
+        private static bool IsDuplicate(string sql)
+        {
+            foreach (var ok in suppressSql)
+            {
+                if (ok.Equals(sql, StringComparison.OrdinalIgnoreCase))
+                    return false;
+                if (sql.StartsWith(ok, StringComparison.OrdinalIgnoreCase))
+                    return false;
+            }
+            return true;
+        }
+
         internal DataAccessTabStatistics GetStatistics()
         {
             var conns = new Dictionary<string, bool>();
@@ -300,8 +382,10 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
             int rowsFetched = 0;
             int l2query = 0;
             int l2objs = 0;
+            int split = 0;
             TimeSpan execTime = TimeSpan.Zero;
             TimeSpan openTime = TimeSpan.Zero;
+            var similar = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var m in aggregatedMessages)
             {
@@ -314,7 +398,17 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                 else if (m.Kind == Kind.CachedObject)
                     l2objs++;
                 if (m.Kind == Kind.Sql || m.Kind == Kind.Scalar || m.Kind == Kind.NonQuery || m.Kind == Kind.Batch)
+                {
                     qrys++;
+                    int cnt;
+                    similar.TryGetValue(m.Text, out cnt);
+                    cnt++;
+                    similar[m.Text] = cnt;
+                } 
+                else if (m.Kind == Kind.Splitted)
+                {
+                    split++;
+                }
                 if (m.Rows.HasValue)
                     rowsFetched += m.Rows.Value;
                 if (m.Kind == Kind.Open)
@@ -331,6 +425,8 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                 ConnectionOpenTime = openTime,
                 SecondLevelObjects = l2objs,
                 SecondLevelHits = l2query,
+                SplittedCount = split,
+                GCCounts = new GCMessage().ToString()
             };
         }
 

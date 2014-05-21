@@ -493,6 +493,18 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
             msg.Duration = NearlyNothing;
             Publish2(msg);
         }
+        public void CacheHitQuery2(string id, string filter, bool count)
+        {
+            var msg = new CacheMessage()
+            {
+                Connection = id,
+                Text = filter,
+                Kind = count ? Kind.CachedCount : Kind.CachedQuery
+            }.AsTimedMessage(GetPoint());
+            msg.Duration = NearlyNothing;
+            Publish2(msg);
+        }
+
         public void CacheHitObject(string id, int objs)
         {
             var msg = new CacheMessage()
@@ -504,6 +516,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
             msg.Duration = NearlyNothing;
             Publish2(msg);
         }
+
         public void OpenDatabase(string url, bool metaOnly)
         {
             var msg = new DataAccessMessage()
@@ -533,6 +546,37 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
             Publish2(msg);
         }
 
+        public object LinqBegin(object comp)
+        {
+            return new LinqMessage() { Compiler = Hash(comp), Kind = Kind.Linq }.AsTimedMessage(GetPoint());
+        }
+        public void Linq(object info, string expression, Exception e) 
+        {
+            var msg = SetDuration<LinqMessage>(info);
+            msg.Text = expression;
+            msg.Failure = e;
+            Publish2(msg);
+        }
+        
+        public object LinqCompile(object comp) 
+        {
+            return new LinqMessage() { Compiler = Hash(comp), Kind = Kind.Translate}.AsTimedMessage(GetPoint());
+        }
+        public void LinqCompiled(object info) 
+        {
+            var msg = SetDuration<LinqMessage>(info);
+            Publish2(msg);
+        }
+        public void LinqSplit(string expression, string split) 
+        {
+            var msg = new LinqMessage()
+            {
+                Kind = Kind.Splitted,
+                Text = expression,
+                EventName = split
+            }.AsTimedMessage(GetPoint());
+            Publish2(msg);
+        }
 
         #endregion
     }

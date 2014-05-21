@@ -1,4 +1,5 @@
-﻿using Glimpse.Core.Framework.Support;
+﻿using System;
+using Glimpse.Core.Framework.Support;
 using Glimpse.TelerikDataAccess.Plugin.Tracing;
 
 namespace Glimpse.TelerikDataAccess.Plugin.Inspector
@@ -9,6 +10,12 @@ namespace Glimpse.TelerikDataAccess.Plugin.Inspector
 
         private TelerikDataAccessExecutionBlock()
         {   // Executed only once: we wire up our runtime tracer instance to the one actually used by OpenAccess.
+            try
+            {
+                Tracing.Interfacer.WireUp("Telerik.OpenAccess.SPI.TraceBase:Instance", RuntimeTracer.Instance);
+                return;
+            }
+            catch (ArgumentException) { } // older runtime
             Tracing.Interfacer.WireUp("OpenAccessRuntime.Intellitrace:tracerImpl", RuntimeTracer.Instance);
         }
     }

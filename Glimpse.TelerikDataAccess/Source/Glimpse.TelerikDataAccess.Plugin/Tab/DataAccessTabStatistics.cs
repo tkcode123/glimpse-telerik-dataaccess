@@ -15,5 +15,8 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
         public TimeSpan ConnectionOpenTime { get; set; }
         public int SecondLevelHits { get; set; }
         public int SecondLevelObjects { get; set; }
+        public int SplittedCount { get; set; }
+
+        public string GCCounts { get; set; }
     }
 }
