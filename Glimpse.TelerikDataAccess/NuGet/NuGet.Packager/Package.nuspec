@@ -20,7 +20,7 @@
     <language>en-US</language>
     <projectUrl>http://tkcode123.github.io/glimpse-telerik-dataaccess</projectUrl>
     <!--<iconUrl>https://nuget.org/Content/Images/packageDefaultIcon-50x50.png</iconUrl>-->
-    <iconUrl>https://github.com/tkcode123/glimpse-telerik-dataaccess/blob/master/Glimpse.TelerikDataAccess/NuGet/NuGet.Packager/package_glimpsedataaccess.png</iconUrl>
+    <iconUrl>https://raw.githubusercontent.com/tkcode123/glimpse-telerik-dataaccess/master/Glimpse.TelerikDataAccess/NuGet/NuGet.Packager/package_glimpsedataaccess.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <licenseUrl>https://github.com/tkcode123/glimpse-telerik-dataaccess/raw/master/LICENSE</licenseUrl>
     <copyright>Copyright Thomas Krüger 2014</copyright>
