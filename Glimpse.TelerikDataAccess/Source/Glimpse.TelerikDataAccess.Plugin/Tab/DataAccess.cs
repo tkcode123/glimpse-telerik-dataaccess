@@ -29,7 +29,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tab
                 .Cell("Activities", TabLayout.Create()
                        .Row(r =>
                        {
-                           r.Cell("hint").DisablePreview().Class("warn").WidthInPixels(20).WithTitle("!");
+                           r.Cell("hint").DisablePreview().Class("glimpse_metadata").WidthInPixels(20).WithTitle("!");
                            r.Cell("ordinal").AsKey().AlignRight().WidthInPixels(20).WithTitle("#");
                            r.Cell("connection").AlignRight().WidthInPixels(30).WithTitle("\u260e"); // \2301 http://unicode-table.com
                            r.Cell("transaction").AlignRight().WidthInPixels(30).WithTitle("Txn"); 

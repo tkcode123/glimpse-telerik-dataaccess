@@ -11,9 +11,9 @@ using Glimpse.Core.Extensibility;
 
 [assembly: ComVisible(false)]
 [assembly: Guid("7C44D0AA-C1AD-403C-CAFE-465A9A84BACB")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
-[assembly: AssemblyInformationalVersion("1.0.0")] // Used to specify the NuGet version number at build time
+[assembly: AssemblyVersion("1.0.2.0")]
+[assembly: AssemblyFileVersion("1.0.2.0")]
+[assembly: AssemblyInformationalVersion("1.0.2")] // Used to specify the NuGet version number at build time
 
 [assembly: CLSCompliant(true)]
 [assembly: InternalsVisibleTo("Glimpse.Test.TelerikDataAccess")]

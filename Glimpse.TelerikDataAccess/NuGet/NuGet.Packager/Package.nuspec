@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>GlimpseTelerikDataAccess</id>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <title>Glimpse Plugin for Telerik DataAccess</title>
     <authors>Thomas Krüger</authors>
     <owners>tkcode123@gmail.com</owners>
@@ -12,6 +12,7 @@
       This NuGet package provides a Glimpse tab for Telerik DataAccess.
     </description>
     <releaseNotes>
+      Version 1.0.2 Fixed issue with delete batch parameter access (2014-05-22)
       Version 1.0.1 Improved support for LINQ queries with upcoming runtimes (2014-05-21)
       Version 1.0.0 Initial Version (2014-05-20)
     </releaseNotes>

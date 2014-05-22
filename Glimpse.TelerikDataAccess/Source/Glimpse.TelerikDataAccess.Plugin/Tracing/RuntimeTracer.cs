@@ -65,7 +65,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
             return result;
         }
 
-        private static Model.ParameterInfo[] Extract(DbParameterCollection p, DataRow[] rows)
+        private static Model.ParameterInfo[] Extract(DbParameterCollection p, DataRow[] rows, DataRowVersion version)
         {
             List<Model.ParameterInfo> result = new List<Model.ParameterInfo>(rows.Length*p.Count);
             if (p.Count > 0)
@@ -78,7 +78,7 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
                         var parameter = p[i];
                         sub.Row = r;
                         sub.Name = parameter.ParameterName;
-                        sub.Value = rows[r][parameter.SourceColumn];
+                        sub.Value = rows[r][parameter.SourceColumn, version];
                         result.Add(sub);
                     }
                 }
@@ -104,8 +104,11 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
         #region OpenAccess Tracing v1
         public  void Batch(string Id, DbDataAdapter adapter, DataRow[] rows)
         {
+            DataRowVersion version = DataRowVersion.Current;
             DbCommand cmd = adapter.InsertCommand ?? adapter.UpdateCommand ?? adapter.DeleteCommand;
-            Publish(new CommandMessage() { Connection = Id, EventName = cmd.CommandText, Kind = Kind.Batch, Transaction = Hash(cmd.Transaction), Parameters = Extract(cmd.Parameters, rows) });
+            if (cmd == adapter.DeleteCommand)
+                version = DataRowVersion.Original;
+            Publish(new CommandMessage() { Connection = Id, EventName = cmd.CommandText, Kind = Kind.Batch, Transaction = Hash(cmd.Transaction), Parameters = Extract(cmd.Parameters, rows, version) });
         }
 
         public  void BatchDone(string Id, int rows, Exception e)
@@ -436,13 +439,14 @@ namespace Glimpse.TelerikDataAccess.Plugin.Tracing
         public object Batch2(string Id, DbDataAdapter adapter, DataRow[] rows) 
         {
             var cmd = adapter.InsertCommand ?? adapter.UpdateCommand ?? adapter.DeleteCommand;
+            var version = adapter.DeleteCommand == cmd ? DataRowVersion.Original : DataRowVersion.Current;
             return new CommandMessage()
             {
                 Connection = Id,
                 Text = cmd.CommandText,
                 Kind = Model.Kind.Batch | Kind.V2,
                 Transaction = Hash(cmd.Transaction),
-                Parameters = Extract(cmd.Parameters, rows)
+                Parameters = Extract(cmd.Parameters, rows, version)
             }.AsTimedMessage(GetPoint());
         }
 
